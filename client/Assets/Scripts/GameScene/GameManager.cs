@@ -8,7 +8,7 @@ using System;
 public class GameManager : MonoSingleton<GameManager> {
 
 	public GameObject FieldPanel;
-	public MapManager[] MapManagers;
+	//public MapManager[] MapManagers;
 	public GameObject Objects;
 	//public PlayerDispManager PlayerDisp;
 	//public EnemyManager EnemyBase;
@@ -252,8 +252,8 @@ public class GameManager : MonoSingleton<GameManager> {
 		case "walk":
 			{
 				var ch = (Character)m.Param [0];
-				var fromPos = (POINT)m.Param [1];
-				var toPos = (POINT)m.Param [2];
+				var fromPos = (Point)m.Param [1];
+				var toPos = (Point)m.Param [2];
 				var en = CharManagers [ch.Id];
 				var dir = (toPos - fromPos).ToDir ();
 				en.MoveTo (fromPos, toPos, dir);

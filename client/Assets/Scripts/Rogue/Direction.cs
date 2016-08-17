@@ -27,7 +27,7 @@ namespace Rogue {
 		static readonly int[] yByDir = {0, -1, -1, 0, 1, 1, 1, 0, -1 };
 
 		/// <summary>
-		/// POINTに変換する(NORTH = (0,-1)とする)
+		/// Pointに変換する(NORTH = (0,-1)とする)
 		/// </summary>
 		/// <returns>The position.</returns>
 		/// <param name="dir">Dir.</param>

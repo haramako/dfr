@@ -2,8 +2,21 @@
 
 namespace Rogue
 {
+	/// <summary>
+	/// 点を表すクラス.
+	/// 
+	/// Yは正方向が北、負方向が南、Xは正方向が東、負方向が西となる
+	/// </summary>
 	public struct Point : IEquatable<Point> {
+		/// <summary>
+		/// X座標
+		/// </summary>
 		public int X { get; private set; }
+
+		/// <summary>
+		/// Y座標
+		/// </summary>
+		/// <value>The y.</value>
 		public int Y { get; private set; }
 
 		public Point(int x, int y){
@@ -61,15 +74,19 @@ namespace Rogue
 			return "(" + X + ", " + Y + ")";
 		}
 
-		static int[] pos2dir = new int[] {
-			(int)Direction.NorthWest, (int)Direction.North, (int)Direction.NorthEast,
-			(int)Direction.West, (int)Direction.North, (int)Direction.East,
-			(int)Direction.SouthWest, (int)Direction.South, (int)Direction.SouthEast,
+		static Direction[] pos2dir = new Direction[] {
+			Direction.NorthWest, Direction.North, Direction.NorthEast,
+			Direction.West, Direction.None, Direction.East,
+			Direction.SouthWest, Direction.South, Direction.SouthEast,
 		};
 
+		/// <summary>
+		/// Directionに変換する
+		/// </summary>
+		/// <returns>The dir.</returns>
 		public Direction ToDir () {
 			if (Y >= -1 && Y <= 1 && X >= -1 && X <= 1) {
-				return (Direction)pos2dir [(Y + 1) * 3 + X + 1];
+				return pos2dir [(Y + 1) * 3 + X + 1];
 			}
 			return Direction.None;
 		}

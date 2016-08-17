@@ -133,10 +133,10 @@ namespace Rogue
 		// 使用例：
 		// 
 		// MapManager map;
-		// List<POINT> path = map.PathFinder( new POINT(10,10), new POINT(20,20), map.StepWalkable() );
+		// List<Point> path = map.PathFinder( new Point(10,10), new Point(20,20), map.StepWalkable() );
 		//    => path に 通常移動ユニットの(10,10)から(20,20)への経路情報が入る
 		//
-		// List<POINT> path = map.PathFinder( new POINT(10,10), new POINT(20,20), map.StepFlyable() );
+		// List<Point> path = map.PathFinder( new Point(10,10), new Point(20,20), map.StepFlyable() );
 		//    => path に 飛行ユニットの(10,10)から(20,20)への経路情報が入る
 		//
 		//=======================================================================================

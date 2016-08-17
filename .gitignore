@@ -12,6 +12,7 @@
 *.suo
 *.sln
 /LocalCache
+/doc
 
 # Mac
 __MACOSX
