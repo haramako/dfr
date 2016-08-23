@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace Rogue
 {
@@ -16,19 +17,28 @@ namespace Rogue
 		GameOver,
 	}
 
-	public class Game
+    public class Message
+    {
+        public string Type { get; private set; }
+        public object[] Param { get; private set; }
+        public Message(string type, params object[] param)
+        {
+            Type = type;
+            Param = param;
+        }
+    }
+
+    public class Game
 	{
-		public class Message{
-			public string Type;
-			public object[] Param;
-		}
 
 		public Map Map { get; private set; }
 		public PathFinder PathFinder { get; private set; }
 		public GameState State { get; private set; }
 		public int TurnNum{ get; private set; }
 		public Player Player;
-		public List<Message> Messages = new List<Message>();
+        public ConcurrentQueue<Message> SendQueue = new ConcurrentQueue<Message>();
+        public ConcurrentQueue<Message> RecvQueue = new ConcurrentQueue<Message>();
+        public Thread GameThread;
 
 		public void log(object obj){
 		//	Console.WriteLine (obj);
@@ -40,16 +50,33 @@ namespace Rogue
 			PathFinder = new PathFinder (Map.Width, Map.Height);
 			State = GameState.TurnStart;
 			TurnNum = 0;
+
 		}
 
+        public void StartThread()
+        {
+            GameThread = new Thread(process);
+            GameThread.Start();
+        }
 
-		public void Send(string command, params object[] param){
+
+		public Message Send(string command, params object[] param){
 			log(command + ": " + String.Join(", ", param.Select(x=>x.ToString()).ToArray()) );
-			Messages.Add (new Message (){ Type = command, Param = param });
-		}
+			SendQueue.Enqueue (new Message (command, param ));
+            UnityEngine.Debug.Log(1);
+            return RecvQueue.Dequeue();
+            UnityEngine.Debug.Log(2);
+        }
 
-		public void Process(){
+        void process(){
 			try {
+                int c = 0;
+                while (true)
+                {
+                    var r = Send("hoge", c++);
+                    System.Threading.Thread.Sleep(1000);
+                }
+
 				switch (State) {
 				case GameState.TurnStart:
 					DoTurnStart ();
@@ -69,7 +96,7 @@ namespace Rogue
 				case GameState.GameOver:
 					break;
 				}
-			} catch (GameOverException ex) {
+			} catch (GameOverException) {
 				State = GameState.GameOver;
 			}
 		}

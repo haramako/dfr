@@ -9,6 +9,9 @@ namespace Rogue
 		Enemy
 	}
 
+	/// <summary>
+	/// ゲーム内のキャラクター
+	/// </summary>
 	public abstract class Character {
 		public Game Game { get; protected set; }
 		public int Id;

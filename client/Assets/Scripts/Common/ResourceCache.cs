@@ -26,7 +26,7 @@ using Object = UnityEngine.Object;
 public class ResourceCache: MonoSingleton<ResourceCache> {
 
 	static public bool Logging = false; // trueなら詳細のログを表示する
-	static public readonly string AssetRoot = "Assets/AssetBundles/Other";
+	static public readonly string AssetRoot = "Assets/Gardens/Characters";
 
 	public abstract class Resource : IDisposable {
 		public string Name;
@@ -252,6 +252,11 @@ public class ResourceCache: MonoSingleton<ResourceCache> {
 		return Instance.LoadOrCreateObject (name,typeof(T),false).Then( obj => (T)obj);
 	}
 
+	public static T LoadSync<T>(string name) where T: Object {
+		var pair = SplitResourceName (name);
+		return (T)Instance.LoadResource (pair[0]).FindObject(pair[1], typeof(T));
+	}
+
 	public static IPromise<T> Create<T>(string name) where T: Object {
 		return Instance.LoadOrCreateObject (name, typeof(T), true).Then (o => (T)o);
 	}
@@ -324,7 +329,7 @@ public class ResourceCache: MonoSingleton<ResourceCache> {
 		Dictionary<string,Object> Objects = new Dictionary<string, Object>();
 
 		static public bool TryCreate(string filename, out Resource res){
-			if (Configure.GetBool ("ResourceCache.LoadDirect")) {
+			if (true || Configure.GetBool ("ResourceCache.LoadDirect")) {
 				// リソース名が "hoge#fuga" なら "hoge/fuga" か "hoge/Resources/fuga" が読み込みの対象になる
 				var assetPathWithResources = AssetRoot+"/"+filename+"/Resources/";
 				if (UnityEditor.AssetDatabase.AssetPathToGUID (assetPathWithResources).Length > 0) {
@@ -375,7 +380,7 @@ public class ResourceCache: MonoSingleton<ResourceCache> {
 		Promise<Resource> OnLoadedPromise;
 
 		static public bool TryCreate(string filename, out Resource res){
-			if (G.Cfs.ExistsInBucket(PlatformDir() + "/" + filename.ToLowerInvariant() + ".ab") ) {
+			if (G.Cfs != null && G.Cfs.ExistsInBucket(PlatformDir() + "/" + filename.ToLowerInvariant() + ".ab") ) {
 				res = new AssetBundleResource (filename);
 				return true;
 			} else {

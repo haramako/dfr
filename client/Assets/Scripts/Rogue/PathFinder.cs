@@ -99,50 +99,6 @@ namespace Rogue {
 		}
 
 		/// <summary>
-		/// 位置と方向を指定して、一方通行の経路をを列挙する
-		/// </summary>
-		/// <returns>経路の位置リスト(開始位置は含めず、分かれ道か終点に立つまでを含む.)</returns>
-		/// <param name="startPos">開始位置.</param>
-		/// <param name="startDir">開始方向.</param>
-		/// <param name="isWalkable">移動可能かどうか</param>
-		public List<Point> FindOneWay( Point startPos, Direction startDir, Stepable isWalkable ){
-			var result = new List<Point>();
-			//if( !isWalkable(startPos, startPos) ) return result;
-
-			Point cur = startPos;
-			Direction curDir = startDir;
-
-			// loop内変数を外だし、初期化
-			bool branched = false;
-			Direction back;
-			Direction nextDir;
-			
-			for(;;){
-				//bool branched = false;
-				back = curDir.Inverse();
-				nextDir = Direction.None;
-				foreach( var dir in DirectionUtil.All ){
-					if( dir == back || dir == back.Rotate (1) || dir == back.Rotate (-1) ) continue; // 後ろに戻りはしない
-					if( isWalkable(cur, cur+dir.ToPos()) <= 1){
-						if( nextDir != Direction.None ){
-							// 分かれ道なので終わり
-							branched = true;
-							break;
-						}else{
-							nextDir = dir;
-						}
-					}
-				}
-				if( branched || nextDir == Direction.None ) return result;
-
-				cur = cur + nextDir.ToPos ();
-				curDir = nextDir;
-				result.Add (new Point(cur));
-			}
-		}
-
-
-		/// <summary>
 		/// 位置と方向を指定して、直線状の移動可能な終点を返す
 		/// </summary>
 		/// <returns>始点から終点までの位置のリスト（開始位置は含まず、そこから１進んだ場所から）</returns>
