@@ -52,7 +52,7 @@ namespace Rogue
 	{
 		public int Width { get; private set;}
 		public int Height { get; private set;}
-		public List<Character> CharacterList = new List<Character>();
+		public List<Character> Characters = new List<Character>();
 
 		Floor NullFloor;
 		Floor[] Data;
@@ -64,7 +64,7 @@ namespace Rogue
 			NullFloor = new Floor(){ Kind= CellKind.Find(0) };
 			Data = new Floor[Width * Height];
 			for (int i = 0; i < Width * Height; i++) {
-				Data [i] = new Floor (){ Kind = CellKind.Find (0) };
+				Data [i] = new Floor (){ Kind = CellKind.Find (1) };
 			}
 		}
 
@@ -99,16 +99,16 @@ namespace Rogue
 		//=======================================================
 
 		public void AddCharacter(Character c, Point pos){
-			c.Position = pos;
-			CharacterList.Add (c);
-			if (this [c.Position].Character != null) throw new Exception ("cannot add character");
+            if (this[pos].Character != null) throw new Exception("cannot add character");
+            c.Position = pos;
+            Characters.Add (c);
 			this [c.Position].Character = c;
 		}
 
 		public void RemoveCharacter(Character c){
-			CharacterList.Remove (c);
-			if (this [c.Position].Character != c) throw new Exception ("cannot remove character");
-			this [c.Position].Character = null;
+            Characters.Remove (c);
+            if (this[c.Position].Character != c) throw new Exception("cannot remove character");
+            this[c.Position].Character = null;
 		}
 
 		public void MoveCharacter(Character c, Point pos){
@@ -181,15 +181,29 @@ namespace Rogue
 			return (from,to)=>{
 				if( !slantAnywhere ){
 					if( from.X != to.X && from.Y != to.Y ){
-						if( !FloorIsFlyable(new Point(from.X, to.Y)) || !FloorIsFlyable(new Point(to.X, from.Y))) return 9999;
+                        return 9999;
+						// if( !FloorIsFlyable(new Point(from.X, to.Y)) || !FloorIsFlyable(new Point(to.X, from.Y))) return 9999;
 					}
 				}
 				return predicate(to)?1:9999;
 			};
 		}
 
-		// 隣接する２マスの経路が、移動可能かどうかを表すdelegateを返す( 挙動は、対応するFloor***able()関数を参照 )
-		public PathFinder.Stepable StepWalkable() { return MakeWalkableFunc(FloorIsWalkable); }
+        public void TemporaryOpen(Point pos, Action action)
+        {
+            var backup = this[pos].Character;
+            try
+            {
+                action();
+            }
+            finally
+            {
+                this[pos].Character = backup;
+            }
+        }
+
+        // 隣接する２マスの経路が、移動可能かどうかを表すdelegateを返す( 挙動は、対応するFloor***able()関数を参照 )
+        public PathFinder.Stepable StepWalkable() { return MakeWalkableFunc(FloorIsWalkable); }
 		public PathFinder.Stepable StepFlyable() { return MakeWalkableFunc(FloorIsFlyable); }
 		public PathFinder.Stepable StepWalkableNow() { return MakeWalkableFunc(FloorIsWalkableNow); }
 		public PathFinder.Stepable StepFlyableNow()  { return MakeWalkableFunc(FloorIsFlyableNow); }

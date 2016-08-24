@@ -10,9 +10,7 @@ namespace Rogue
 
 	public enum GameState {
 		TurnStart,
-		Player,
-		EnemyAttack,
-		EnemyMove,
+        Play,
 		TurnEnd,
 		GameOver,
 	}
@@ -30,18 +28,18 @@ namespace Rogue
 
     public class Game
 	{
+        public static Game Instance;
 
 		public Map Map { get; private set; }
 		public PathFinder PathFinder { get; private set; }
 		public GameState State { get; private set; }
 		public int TurnNum{ get; private set; }
-		public Player Player;
         public ConcurrentQueue<Message> SendQueue = new ConcurrentQueue<Message>();
         public ConcurrentQueue<Message> RecvQueue = new ConcurrentQueue<Message>();
         public Thread GameThread;
 
 		public void log(object obj){
-		//	Console.WriteLine (obj);
+			UnityEngine.Debug.Log (obj);
 		}
 		
 		public Game ()
@@ -55,91 +53,104 @@ namespace Rogue
 
         public void StartThread()
         {
-            GameThread = new Thread(process);
+            GameThread = new Thread(Process);
             GameThread.Start();
         }
 
-
-		public Message Send(string command, params object[] param){
-			log(command + ": " + String.Join(", ", param.Select(x=>x.ToString()).ToArray()) );
+        public Message Send(string command, params object[] param){
+			log("Send: " + command + ": " + UnityEngine.JsonUtility.ToJson(param));
 			SendQueue.Enqueue (new Message (command, param ));
-            UnityEngine.Debug.Log(1);
-            return RecvQueue.Dequeue();
-            UnityEngine.Debug.Log(2);
+            var recv = RecvQueue.Dequeue();
+            log("Recv: " + recv.Type + ": " + UnityEngine.JsonUtility.ToJson(recv.Param));
+            return recv;
         }
 
-        void process(){
-			try {
-                int c = 0;
+        public Message SendRecv(string recvType, string command, params object[] param)
+        {
+            var res = Send(command, param);
+            if( res.Type != recvType)
+            {
+                throw new InvalidOperationException("require " + recvType + " but " + res.Type);
+            }
+            return res;
+        }
+
+        public void Process(){
+            while (true)
+            {
+                try
+                {
+                    switch (State)
+                    {
+                    case GameState.TurnStart:
+                        DoTurnStart();
+                        break;
+                    case GameState.Play:
+                        DoPlay();
+                        break;
+                    case GameState.TurnEnd:
+                        DoTurnEnd();
+                        break;
+                    case GameState.GameOver:
+                        break;
+                    }
+                }
+                catch (GameOverException)
+                {
+                    State = GameState.GameOver;
+                }
+                catch(Exception ex)
+                {
+                    UnityEngine.Debug.LogException(ex);
+                }
+            }
+		}
+
+        public void Init()
+        {
+            var atlas = new int[] { 1, 2, 3, 168, 174, 210, 211 };
+            for ( int i=0; i<20; i++)
+            {
+                Point pos;
                 while (true)
                 {
-                    var r = Send("hoge", c++);
-                    System.Threading.Thread.Sleep(1000);
+                    pos = new Point(UnityEngine.Random.Range(8, 20), UnityEngine.Random.Range(8, 20));
+                    if (Map[pos].Character == null) break;
                 }
-
-				switch (State) {
-				case GameState.TurnStart:
-					DoTurnStart ();
-					break;
-				case GameState.Player:
-					DoPlayer ();
-					break;
-				case GameState.EnemyAttack:
-					DoEnemyAttack ();
-					break;
-				case GameState.EnemyMove:
-					DoEnemyMove ();
-					break;
-				case GameState.TurnEnd:
-					DoTurnEnd ();
-					break;
-				case GameState.GameOver:
-					break;
-				}
-			} catch (GameOverException) {
-				State = GameState.GameOver;
-			}
-		}
+                var c = new Character();
+                c.Id = i;
+                c.AtlasId = atlas[UnityEngine.Random.Range(0, atlas.Length - 1)];
+                if (Map[pos].Character == null)
+                {
+                    Map.AddCharacter(c, pos);
+                }
+            }
+        }
 
 		public void DoTurnStart(){
 			TurnNum++;
-			State = GameState.Player;
+			State = GameState.Play;
 		}
 
-		public void DoPlayer(){
-			State = GameState.EnemyAttack;
-		}
-
-		public void DoEnemyAttack(){
-			State = GameState.EnemyMove;
-			foreach (var ch in Map.CharacterList) {
-				if (ch.Type == CharacterType.Player) continue;
-				ch.DoAttack ();
-			}
-		}
-
-		public void DoEnemyMove(){
+		public void DoPlay(){
 			State = GameState.TurnEnd;
-			foreach (var ch in Map.CharacterList) {
-				if (ch.Type == CharacterType.Player) continue;
-				ch.DoMove ();
-			}
-		}
-
+            foreach (var ch in Map.Characters)
+            {
+                var res = SendRecv("AMove", "QMove", ch);
+                var path = (Point[])res.Param[0];
+                WalkCharacter(ch, path);
+            }
+        }
+        
 		public void DoTurnEnd(){
 			State = GameState.TurnStart;
-			if (!(CheckAttack (Player.Dir))) {
-				foreach( var p in PathFinder.FindAround(Player.Position, 1, false, Map.FloorIsFlyable) ){
-					var ch = Map [p].Character;
-					if (ch != null && ch.Type == CharacterType.Enemy) {
-						Player.Dir = (ch.Position - Player.Position).ToDir ();
-						Send("changedir", Player, Player.Dir);
-						break;
-					}
-				}
-			}
-			Player.DoTurnEnd ();
 		}
+
+        public void WalkCharacter(Character ch, Point[] path)
+        {
+            Map.MoveCharacter(ch, path.Last());
+            SendRecv(null, "Walk", ch, path);
+        }
 
 		public string Display(){
 			var sb = new StringBuilder ();
@@ -158,38 +169,12 @@ namespace Rogue
 				}
 				sb.AppendLine ();
 			}
-			foreach( var ch in Map.CharacterList ){
+			foreach( var ch in Map.Characters ){
 				sb.AppendFormat( "{0:d2}:{1} {2} HP={3} ATK={4} DEF={5}\n", ch.Id, ch.Name, ch.Position, ch.Hp, ch.Attack, ch.Defense);
 			}
 			return sb.ToString ();
 		}
 
-		public void CmdMovePlayer(Point to){
-			var oldPos = Player.Position;
-			Map.MoveCharacter (Player, to);
-			Player.Dir = (to - oldPos).ToDir ();
-			Send("walk", Player, oldPos, Player.Position);			
-			if (Map [to].Kind.Id == 19) {
-				// ゴール
-				Send("goal");
-			}
-		}
-
-		public void CmdAttack(Direction dir){
-			Player.Dir = dir;
-			var ch = Map [Player.Position + dir].Character;
-			if (Player.IsAttackableTo (ch)) {
-				Player.AttackTo (ch);
-			} else {
-				Send ("suburi", Player);
-			}
-		}
-
-		public bool CheckAttack(Direction dir){
-			Player.Dir = dir;
-			var ch = Map [Player.Position + dir].Character;
-			return (Player.IsAttackableTo (ch));
-		}
 	}
 }
 

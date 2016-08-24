@@ -74,11 +74,33 @@ namespace Rogue {
 				}
 			}
 		}
-		
-		/// <summary>
-		/// 始点と終点を指定して経路を選択する
-		/// </summary>
-		public List<Point> FindPath( Point _from, Point _to, int movePoint, Stepable isWalkable ){
+
+        /// <summary>
+        /// 移動範囲取得する
+        /// </summary>
+        public List<Point> FindMoveRange(Point _from, int movePoint, Stepable isWalkable)
+        {
+            updateMoveCostTable(_from, movePoint, isWalkable);
+
+            var result = new List<Point>();
+            for (int y = 0; y < Height; y++)
+            {
+                for (int x = 0; x < Width; x++)
+                {
+                    if (rest[y * Width + x] >= 0)
+                    {
+                        result.Add(new Point(x, y));
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 始点と終点を指定して経路を選択する
+        /// </summary>
+        public List<Point> FindPath( Point _from, Point _to, int movePoint, Stepable isWalkable ){
 			updateMoveCostTable(_from, movePoint, isWalkable);
 
 			// restから導かれる複数の経路から一つの経路にしぼる
@@ -86,13 +108,14 @@ namespace Rogue {
 			if( curRest >= 0 ){
 				var result = new List<Point>();
 				Point cur = _to;
-				
-				while( !(cur == _from) ){
-					result.Add (new Point(cur));
-					cur -= fromDir [cur.Y*Width+cur.X].ToPos ();
-				}
 
-				result.Reverse ();
+                while ( !(cur == _from) ){
+                    result.Add(new Point(cur));
+                    cur -= fromDir [cur.Y*Width+cur.X].ToPos ();
+				}
+                result.Add(new Point(cur)); // 最後に自分を含む
+
+                result.Reverse ();
 				return result;
 			}
 			return null;

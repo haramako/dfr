@@ -1,73 +1,148 @@
 ﻿using UnityEngine;
 using UnityEngine.EventSystems;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using RSG;
 using Rogue;
 
 public class GameScene : MonoBehaviour {
 
+    public enum Mode
+    {
+        None,
+        QMove,
+        Walking,
+    }
+
 	public Terrain Terrain;
 	public MeshRenderer TerrainGridMesh;
+    public TerrainGrid TerrainGridActive;
 	public GameObject CameraTarget;
 	public Camera MainCamera;
 	public CharacterRenderer CharacterBase;
+    Vector3 FocusToPoint; // カメラが向かうべきポイント
+    float CameraDistanceTo; // カメラの距離
+    int CurZoom = 1;
+
+    public new Dictionary<int, CharacterRenderer> Characters = new Dictionary<int, CharacterRenderer>();
 
     public Game Game { get; private set; }
 
+    Mode mode;
+
 	void Start(){
 
+        mode = Mode.None;
+        TerrainGridActive.SetActiveGrids(new Point[0]);
+        FocusToPoint = CameraTarget.transform.localPosition;
+        CameraDistanceTo = -20f;
+
         Game = new Game();
+        Game.Init();
+        RedrawAll();
+
         Game.StartThread();
+    }
 
-		var atlas = new int[]{ 1, 2, 3, 168, 174, 210, 211 };
-
-		for (int i = 0; i < 30; i++) {
-			var cObj = Instantiate (CharacterBase);
-			var x = Random.Range (0, 20);
-			var z = Random.Range (0, 20);
-			var pos = new Vector3 (x + 0.5f, 0, z + 0.5f);
-			pos.y = GetTerrainHeight (pos);
-			cObj.transform.position = pos;
-			cObj.AtlasName = string.Format ("Enemy{0:0000}", atlas [Random.Range (0, atlas.Length - 1)]);
-		}
-	}
-
-	void Update(){
+    void Update(){
 		Application.targetFrameRate = 60;
-        Rogue.Message mes;
-        if( Game.SendQueue.TryDequeue(out mes))
+
+        var curPos = CameraTarget.transform.localPosition;
+        curPos = Vector3.Lerp(FocusToPoint, curPos, Mathf.Pow(0.05f, Time.deltaTime));
+        CameraTarget.transform.localPosition = curPos;
+
+        var curDistance = MainCamera.transform.localPosition;
+        curDistance.z = Mathf.Lerp(CameraDistanceTo, curDistance.z, Mathf.Pow(0.1f, Time.deltaTime));
+        MainCamera.transform.localPosition = curDistance;
+
+
+        if (mode == Mode.None)
         {
-            Debug.Log(mes);
-            Game.RecvQueue.Enqueue(new Message("hoge", 1, 2));
+            Rogue.Message mes;
+            if (Game.SendQueue.TryDequeue(out mes))
+            {
+                this.SendMessage(mes.Type, mes);
+            }
         }
 	}
 
+    void Send(string command, params object[] param)
+    {
+        Game.RecvQueue.Enqueue(new Message(command, param));
+    }
+
 	void MoveCameraTo(Vector3 pos){
+        FocusToPoint = pos;
 		CameraTarget.transform.localPosition = pos;
 	}
 
 	public void OnBeginDrag(PointerEventData ev){
-		//Debug.Log("Begin Drag");
-	}
+        if (ev.button != PointerEventData.InputButton.Left) return;
+        //Debug.Log("Begin Drag");
+    }
 
-	public void OnEndDrag(PointerEventData ev){
-		//Debug.Log("End Drag");
-	}
+    public void OnEndDrag(PointerEventData ev){
+        if (ev.button != PointerEventData.InputButton.Left) return;
+        //Debug.Log("End Drag");
+    }
 
-	public void OnDrag(PointerEventData ev){
-		var delta = new Vector3 (ev.delta.x / Screen.width, 0, ev.delta.y / Screen.height);
+    public void OnDrag(PointerEventData ev){
+        if (ev.button != PointerEventData.InputButton.Left) return;
+        var delta = new Vector3 (ev.delta.x / Screen.width, 0, ev.delta.y / Screen.height);
 		var rot = Quaternion.Euler (0, 45, 0);
 		delta = rot * delta;
-		MoveCameraTo (CameraTarget.transform.localPosition - delta * 10f);
+        MoveCameraTo( CameraTarget.transform.localPosition - delta * 10f);
 	}
 
 	public void OnPointerClick (PointerEventData ev){
-		Vector2 hit;
-		if (LaycastByScreenPos (ev.position, out hit)) {
-			Debug.Log (hit);
+        if (ev.button != PointerEventData.InputButton.Left) return;
+        if (ev.dragging == true) return;
+
+		Rogue.Point hit;
+		if (LaycastByScreenPosInt (ev.position, out hit)) {
+            Debug.Log(hit);
+            switch (mode)
+            {
+            case Mode.QMove:
+                {
+                    Debug.Log("from" + curCharacter.Position + " to " + hit);
+                    Point[] path = null;
+                    Game.Map.TemporaryOpen(curCharacter.Position, () =>
+                    {
+                        path = Game.PathFinder.FindPath(curCharacter.Position, hit, 3, Game.Map.StepWalkableNow()).ToArray();
+                    });
+                    if (path != null)
+                    {
+                        Send("AMove", (object)path);
+                        mode = Mode.None;
+                    }
+                }
+                break;
+            default:
+                // DO NOTHING;
+                break;
+            }
 		}
 	}
+
+    public void OnZoomButtonClick()
+    {
+        CurZoom = (CurZoom + 1) % 3;
+        float[] zooms = { 15, 20, 30 };
+        CameraDistanceTo = -zooms[CurZoom];
+    }
+
+    public void FocusTo(Vector3 pos)
+    {
+        Plane plane = new Plane(new Vector3(0,1,0), 0);
+        Ray ray = MainCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+        ray.origin = pos;
+        float enter;
+        if (plane.Raycast(ray, out enter)) {
+            FocusToPoint = ray.GetPoint(enter);
+        }
+    }
 		
 	// 高さを取得する
 	public float GetTerrainHeight(Vector3 pos){
@@ -87,5 +162,107 @@ public class GameScene : MonoBehaviour {
 		}
 	}
 
-}
+    public bool LaycastByScreenPosInt(Vector2 screenPos, out Point hitPos)
+    {
+        Vector2 hit;
+        if( LaycastByScreenPos(screenPos, out hit))
+        {
+            hitPos = new Point(Mathf.FloorToInt(hit.x), Mathf.FloorToInt(hit.y));
+            return true;
+        }
+        else
+        {
+            hitPos = new Point();
+            return false;
+        }
+    }
 
+    public void RedrawAll()
+    {
+        foreach( var ch in Game.Map.Characters)
+        {
+            UpdateCharacter(ch);
+        }
+    }
+
+    public CharacterRenderer GetCharacterRenderer(Character ch)
+    {
+        CharacterRenderer cr;
+        if (!Characters.TryGetValue(ch.Id, out cr))
+        {
+            cr = Instantiate(CharacterBase);
+            cr.name = ch.Name + ":" + ch.Id;
+            cr.AtlasName = string.Format("Enemy{0:0000}", ch.AtlasId);
+            Characters[ch.Id] = cr;
+        }
+        return cr;
+    }
+
+    public void UpdateCharacter(Character ch)
+    {
+        var cr = GetCharacterRenderer(ch);
+        var pos = new Vector3(ch.Position.X + 0.5f, 0, ch.Position.Y + 0.5f);
+        pos.y = GetTerrainHeight(pos);
+        cr.transform.localPosition = pos;
+    }
+
+    //===================================================================
+    // メッセージハンドラ
+    //===================================================================
+
+    Character curCharacter;
+
+    public void QMove(Message mes)
+    {
+        var ch = (Character)mes.Param[0];
+        var cr = GetCharacterRenderer(ch);
+        Point[] range = null;
+        Game.Map.TemporaryOpen(ch.Position, () => { range = Game.PathFinder.FindMoveRange(ch.Position, 3, Game.Map.StepWalkableNow()).ToArray(); });
+        mode = Mode.QMove;
+        curCharacter = ch;
+        TerrainGridActive.SetActiveGrids(range);
+
+        FocusTo(cr.transform.position);
+    }
+
+    IEnumerator Walk(Message mes)
+    {
+        float n = 0;
+        var ch = (Character)mes.Param[0];
+        var cr = GetCharacterRenderer(ch);
+        var path = (Point[])mes.Param[1];
+        var dir = Direction.None;
+        while (true)
+        {
+            bool finish = false;
+            n += Time.deltaTime * 5;
+            var i = (int)n;
+            Vector2 pos;
+            if (n >= path.Length - 1)
+            {
+                finish = true;
+                pos = path[path.Length - 1].ToVector2();
+            }
+            else
+            {
+                var prevPos = path[i];
+                var nextPos = path[i + 1];
+                dir = (nextPos - prevPos).ToDir();
+                pos = Vector2.Lerp(prevPos.ToVector2(), nextPos.ToVector2(), Mathf.Repeat(n, 1));
+            }
+
+            var pos3 = new Vector3(pos.x + 0.5f, 0, pos.y + 0.5f);
+            pos3.y = GetTerrainHeight(pos3);
+            cr.transform.localPosition = pos3;
+            cr.Dir = dir;
+
+            if (finish) break;
+            yield return null;
+        }
+        FocusTo(cr.transform.position);
+
+        RedrawAll();
+        Send(null);
+    }
+
+}

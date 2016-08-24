@@ -2,12 +2,13 @@
 
 namespace Rogue
 {
-	/// <summary>
-	/// 点を表すクラス.
-	/// 
-	/// Yは正方向が北、負方向が南、Xは正方向が東、負方向が西となる
-	/// </summary>
-	public struct Point : IEquatable<Point> {
+    /// <summary>
+    /// 点を表すクラス.
+    /// 
+    /// Yは正方向が北、負方向が南、Xは正方向が東、負方向が西となる
+    /// </summary>
+    [Serializable]
+    public struct Point : IEquatable<Point> {
 		/// <summary>
 		/// X座標
 		/// </summary>
@@ -90,6 +91,11 @@ namespace Rogue
 			}
 			return Direction.None;
 		}
+
+        public UnityEngine.Vector2 ToVector2()
+        {
+            return new UnityEngine.Vector2(X, Y);
+        }
 
 		public float Length () {
 			return (float)System.Math.Sqrt(X * X + Y * Y);

@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Linq;
 
 [ExecuteInEditMode]
 [RequireComponent( typeof( MeshRenderer ) )]
@@ -11,6 +12,7 @@ public class TerrainGrid : MonoBehaviour {
 
 	MeshFilter meshFilter;
 	float[,] heightMap;
+    Rogue.Point[] points;
 
 	bool dirty = true;
 
@@ -50,6 +52,10 @@ public class TerrainGrid : MonoBehaviour {
 				statMap [x, z] = (data.GetInterpolatedNormal (
 					(x * GridSize + GridSize * 0.5f) / data.size.x, 
 					(z * GridSize + GridSize * 0.5f) / data.size.z).y > 0.95f) ? 1: 0;
+
+                if( points != null && !points.Any(p => (p.X == x && p.Y == z))){
+                    statMap[x, z] = 0;
+                }
 			}
 		}
 
@@ -83,9 +89,24 @@ public class TerrainGrid : MonoBehaviour {
 		mesh.triangles = triangles;
 		mesh.RecalculateNormals();
 		mesh.RecalculateBounds();
-		//mesh.Optimize();
+        //mesh.Optimize();
+
+        mesh.hideFlags = HideFlags.HideAndDontSave;
 
 		meshFilter.sharedMesh = mesh;
 		meshFilter.sharedMesh.name = "Terrain Grid";
+
+        var collider = GetComponent<MeshCollider>();
+        if( collider != null)
+        {
+            collider.sharedMesh = mesh;
+        }
 	}
+
+    public void SetActiveGrids(Rogue.Point[] points_)
+    {
+        points = points_;
+        Refresh();
+    }
+
 }

@@ -8,8 +8,8 @@ public class CharacterRenderer : MonoBehaviour {
 	public Direction Dir;
 
 	static Vector2 BasePos = new Vector2 (0, 0.85f);
-	static int[] RotateTable = new int[]{0,1,2,3,4,3,2,1};
-	static bool[] FlipTable = new bool[]{false,false,false,false,false,true,true,true};
+	static int[] RotateTable = new int[]{0,4,3,2,1,0,1,2,3};
+    static bool[] FlipTable = new bool[] { false, false, true, true, true, false, false, false, false };
 
 	SpriteRenderer sprite;
 
@@ -24,14 +24,17 @@ public class CharacterRenderer : MonoBehaviour {
 	}
 
 	void Update(){
+        /*
 		var anim = Mathf.FloorToInt (Time.time * 4) % 2 + 1;
 		transform.localRotation *= Quaternion.Euler (0, 50 * Time.deltaTime, 0);
 		var angles = transform.localRotation.eulerAngles;
 		var rot = Mathf.FloorToInt (angles.y * 8f / 360f + 0.5f) % 8;
-		var imgNum = RotateTable [rot];
+        */
+        var anim = Mathf.FloorToInt(Time.time * 4) % 2 + 1;
+        var imgNum = RotateTable [(int)Dir.Rotate(5)];
 		var spr = ResourceCache.LoadSync<Sprite> (AtlasName + "$move_" + imgNum + "_" + anim);
 		sprite.sprite = spr;
-		sprite.flipX = FlipTable [rot];
+		sprite.flipX = FlipTable [(int)Dir.Rotate(5)];
 	}
 
 	void redraw(){
