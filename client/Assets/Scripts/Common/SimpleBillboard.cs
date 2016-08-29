@@ -11,7 +11,7 @@ public class SimpleBillboard : MonoBehaviour {
 		if (camera == null) return;
 		backupQuaternion = transform.localRotation;
 
-		var cameraForward = camera.transform.TransformVector (new Vector3 (0, 0, 1));
+		var cameraForward = camera.transform.TransformVector (new Vector3 (0, 0, -1));
 		var cameraUp = camera.transform.TransformVector (new Vector3 (0, 1, 0));
 		transform.LookAt (transform.position - cameraForward, cameraUp);
 	}

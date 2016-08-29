@@ -43,8 +43,34 @@ namespace Rogue
 
 	}
 
+	public enum CellStatusType {
+		None,
+		Fire,
+		Freeze,
+		Grow,
+		Lightning,
+	}
+
+	public abstract class CellStatus {
+		public virtual CellStatusType Type { get { return CellStatusType.None; } }
+		public virtual CellStatusType Turn { get; private set; }
+		public virtual void OnEnterCharacter(){}
+		public virtual void OnExitCharacter(){}
+		public virtual void OnTurnStart(){}
+		public virtual void OnTurnEnd(){}
+	}
+
+	public class CellFire : CellStatus {
+		public CellStatusType Type { get { return CellStatusType.Fire; } }
+	}
+
+	public class CellFreeze : CellStatus {
+		public CellStatusType Type { get { return CellStatusType.Freeze; } }
+	}
+	
 	public class Floor {
 		public CellKind Kind;
+		public List<CellStatus> Statuses = new List<CellStatus>();
 		public Character Character;
 	}
 
@@ -52,6 +78,7 @@ namespace Rogue
 	{
 		public int Width { get; private set;}
 		public int Height { get; private set;}
+		public PathFinder PathFinder { get; private set; }
 		public List<Character> Characters = new List<Character>();
 
 		Floor NullFloor;
@@ -66,6 +93,7 @@ namespace Rogue
 			for (int i = 0; i < Width * Height; i++) {
 				Data [i] = new Floor (){ Kind = CellKind.Find (1) };
 			}
+			PathFinder = new PathFinder (Width, Height);
 		}
 
 		public Floor this [int x, int y] { get { return GetCell(x,y); } }
@@ -192,6 +220,7 @@ namespace Rogue
         public void TemporaryOpen(Point pos, Action action)
         {
             var backup = this[pos].Character;
+			this [pos].Character = null;
             try
             {
                 action();

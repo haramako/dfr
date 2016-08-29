@@ -31,7 +31,6 @@ namespace Rogue
         public static Game Instance;
 
 		public Map Map { get; private set; }
-		public PathFinder PathFinder { get; private set; }
 		public GameState State { get; private set; }
 		public int TurnNum{ get; private set; }
         public ConcurrentQueue<Message> SendQueue = new ConcurrentQueue<Message>();
@@ -45,7 +44,6 @@ namespace Rogue
 		public Game ()
 		{
 			Map = new Map (20, 20);
-			PathFinder = new PathFinder (Map.Width, Map.Height);
 			State = GameState.TurnStart;
 			TurnNum = 0;
 
@@ -138,7 +136,15 @@ namespace Rogue
             {
                 var res = SendRecv("AMove", "QMove", ch);
                 var path = (Point[])res.Param[0];
-                WalkCharacter(ch, path);
+				WalkCharacter(ch, path);
+				if (res.Param.Length > 1) {
+					var subcommand = (string)res.Param [1];
+					if (subcommand == "Attack") {
+						var targetPos = (Point)res.Param [2];
+						var target = Map [targetPos].Character;
+						SendRecv (null, "Attack", ch, target, (target.Position - ch.Position).ToDir (), 99);
+					}
+				}
             }
         }
         

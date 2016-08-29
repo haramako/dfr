@@ -18,6 +18,7 @@ namespace Rogue {
 
 	public class DirectionUtil {
 		public static readonly Direction[] All = new Direction[]{Direction.North, Direction.NorthEast, Direction.East, Direction.SouthEast, Direction.South, Direction.SouthWest, Direction.West, Direction.NorthWest};
+		public static readonly Direction[] All4 = new Direction[]{Direction.North, Direction.East, Direction.South, Direction.West};
 	}
 
 	/// DIRECTION関係の拡張メソッド
