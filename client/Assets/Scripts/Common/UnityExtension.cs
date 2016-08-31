@@ -6,7 +6,6 @@ using System;
 using SLua;
 using System.Linq;
 
-[CustomLuaClass]
 public static class Util {
 
 	public static T FindByName<T>(this GameObject obj,string name) where T : Component

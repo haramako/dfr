@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using DebuggerNonUserCodeAttribute = System.Diagnostics.DebuggerNonUserCodeAttribute;
 using ConditionalAttribute = System.Diagnostics.ConditionalAttribute;
-using SLua;
+//using SLua;
 
-[CustomLuaClass]
+//[CustomLuaClass]
 public class Configure {
 	static Dictionary<string,string> dict;
 

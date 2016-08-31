@@ -490,6 +490,10 @@ namespace SLua
 		{
 			HashSet<Type> exported = new HashSet<Type>();
 			string f = System.IO.Path.Combine(path , name + ".cs");
+			if (!Directory.Exists(path))
+			{
+				Directory.CreateDirectory(path);
+			}
 			StreamWriter file = new StreamWriter(f, false, Encoding.UTF8);
 			file.NewLine = NewLine;
 			Write(file, "using System;");
